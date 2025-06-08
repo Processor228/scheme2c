@@ -1,7 +1,7 @@
 #pragma once
 
-#include "fmt/format.h"
-#include "pugixml.hpp"
+#include <fmt/format.h>
+#include <pugixml.hpp>
 
 #include <cctype>
 #include <cstddef>
@@ -12,42 +12,26 @@
 #include <unordered_map>
 #include <vector>
 
+#include "block-base.hxx"
+
 using namespace std::string_literals;
-
-struct Port {
-    size_t id;
-    std::string name_of_connector;
-};
-
-struct Block {
-    std::string m_name;
-    size_t m_sid;
-
-    // others may connect to
-    std::vector<Port> ports;
-public:
-    virtual ~Block() = default;
-
-    Block(std::string name, size_t sid) : m_name(std::move(name)), m_sid(sid)
-    {}
-
-    virtual std::string exportSignature(std::string package_name) {
-        return "";
-    }
-
-    virtual std::string evaluationCode(std::string package_name) {
-        return "";
-    }
-
-    virtual std::string requiredSetupCode(std::string package_name) {
-        return "";
-    }
-
-};
 
 struct BlockSocket {
     size_t SID;
     size_t port_ID;
+
+    static BlockSocket parseSocket(std::string s) {
+        size_t hash_pos = s.find('#');
+        if (hash_pos == std::string::npos) throw std::runtime_error("Invalid Src format: missing #");
+
+        size_t colon_pos = s.find(':', hash_pos);
+        if (colon_pos == std::string::npos) throw std::runtime_error("Invalid Src format: missing :");
+
+        return {
+            static_cast<size_t>(std::stoul(s.substr(0, hash_pos))),
+            static_cast<size_t>(std::stoul(s.substr(colon_pos + 1))) - 1
+        };
+    }
 };
 
 class Inport : public Block {
@@ -104,7 +88,7 @@ public:
             }
         }
 
-        return std::make_shared<Sum>(std::string(name), sid, std::move(operations));
+        return std::make_shared<Sum>(std::string(name), sid, operations);
     }
 
     Sum(std::string name, size_t sid, std::pair<Op, Op> operations)
@@ -208,34 +192,3 @@ public:
             ports.push_back({1, ""});
         }
 };
-
-inline std::shared_ptr<Block> withEnoughInfoAboutType(
-    std::string_view type,
-    const pugi::xml_node& elem
-) {
-    std::string name;
-    size_t sid;
-    for (const auto& attr: elem.attributes()) {
-        if (std::string_view(attr.name()) == "Name") {
-            name = attr.as_string();
-            std::erase_if(name, ::isspace);
-        }
-        if (std::string_view(attr.name()) == "SID") {
-            sid = attr.as_ullong();
-        }
-    }
-
-    if (type == "Inport") {
-        return Inport::parseFromXmlNode(elem, name, sid);
-    } else if (type == "Gain") {
-        return Gain::parseFromXmlNode(elem, name, sid);
-    } else if (type == "UnitDelay") {
-        return UnitDelay::parseFromXmlNode(elem, name, sid);
-    } else if (type == "Sum") {
-        return Sum::parseFromXmlNode(elem, name, sid);
-    } else if (type == "Outport") {
-        return Outport::parseFromXmlNode(elem, name, sid);
-    } else {
-        throw std::runtime_error("Unknown block type: "s + type.data());
-    }
-}

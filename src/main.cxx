@@ -30,14 +30,14 @@ int main(int argc, char* argv[])
             .withProlog(R"(
 #include "{0}_run.h"
 #include <math.h>
-                )")
+)")
             .withEpilogue(R"(
 const {0}_ExtPort * const
     {0}_generated_ext_ports = ext_ports;
 
 const size_t
     {0}_generated_ext_ports_size = sizeof(ext_ports);
-                )")
+)")
             .into("autogen.c");
 
     } catch(const std::exception& e) {

@@ -1,8 +1,8 @@
 #pragma once
 
-#include "pugixml.hpp"
+#include <pugixml.hpp>
+
 #include <cstddef>
-#include <iostream>
 #include <fstream>
 #include <ranges>
 #include <set>
@@ -122,7 +122,7 @@ private:
 
         ss << "\n";
 
-        // update delayed units
+        // and only then update delayed units
         for (auto sid_delayed : m_graph.delayed()) {
             std::string code = m_graph.nodes().at(sid_delayed)->evaluationCode(m_package_name);
             if (!code.empty())

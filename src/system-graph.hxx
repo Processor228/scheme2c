@@ -1,10 +1,9 @@
 #pragma once
 
-#include "pugixml.hpp"
+#include <pugixml.hpp>
 
 #include <algorithm>
 #include <cstddef>
-#include <iostream>
 #include <memory>
 #include <string_view>
 #include <unordered_map>
@@ -17,20 +16,6 @@
 struct Connection {
     BlockSocket from;
     BlockSocket to;
-
-    static BlockSocket parseSocket(std::string s) {
-        size_t hash_pos = s.find('#');
-        if (hash_pos == std::string::npos) throw std::runtime_error("Invalid Src format: missing #");
-
-        size_t colon_pos = s.find(':', hash_pos);
-        if (colon_pos == std::string::npos) throw std::runtime_error("Invalid Src format: missing :");
-
-        return {
-            static_cast<size_t>(std::stoul(s.substr(0, hash_pos))),
-            static_cast<size_t>(std::stoul(s.substr(colon_pos + 1))) - 1
-        };
-    }
-
 };
 
 class SystemGraph {
@@ -87,7 +72,7 @@ private:
                 type = attr.as_string();
             }
         }
-        auto block = withEnoughInfoAboutType(type, elem);
+        auto block = Block::withEnoughInfoAboutType(type, elem);
         if (type == "Inport") {
             m_inports.push_back(block->m_sid);
         } else if (type == "Outport") {
@@ -95,6 +80,7 @@ private:
         } else if (type == "UnitDelay") {
             m_delayed.push_back(block->m_sid);
         }
+
         return block;
     }
 
@@ -104,18 +90,18 @@ private:
 
         auto src_node = line_node.select_node("./P[@Name='Src']");
         if (src_node) {
-            src = Connection::parseSocket(src_node.node().text().as_string());
+            src = BlockSocket::parseSocket(src_node.node().text().as_string());
         }
         std::string_view source_name = m_nodes.at(src.SID)->m_name;
 
         auto dst_node = line_node.select_node("./P[@Name='Dst']");
         if (dst_node) {
-            dsts.push_back(Connection::parseSocket(dst_node.node().text().as_string()));
+            dsts.push_back(BlockSocket::parseSocket(dst_node.node().text().as_string()));
         } else {
             for (auto branch_node : line_node.select_nodes("./Branch")) {
                 auto branch_dst_node = branch_node.node().select_node("./P[@Name='Dst']");
                 if (branch_dst_node) {
-                    dsts.push_back(Connection::parseSocket(branch_dst_node.node().text().as_string()));
+                    dsts.push_back(BlockSocket::parseSocket(branch_dst_node.node().text().as_string()));
                 }
             }
         }
@@ -124,7 +110,6 @@ private:
             // if such sid is not yet defined, error will occur
             m_nodes.at(sid)->ports[port].name_of_connector = source_name;
         }
-
 
         return {src, dsts};
     }
