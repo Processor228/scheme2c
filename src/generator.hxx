@@ -1,6 +1,7 @@
 #pragma once
 
 #include <pugixml.hpp>
+#include <fmt/core.h>
 
 #include <cstddef>
 #include <fstream>
@@ -9,8 +10,6 @@
 #include <sstream>
 #include <string_view>
 #include <vector>
-
-#include <fmt/core.h>
 
 #include "blocks.hxx"
 #include "overload.hxx"

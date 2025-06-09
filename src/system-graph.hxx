@@ -1,7 +1,7 @@
 #pragma once
 
-#include "blocks.hxx"
 #include <pugixml.hpp>
+#include <fmt/core.h>
 
 #include <cstddef>
 #include <memory>
@@ -10,7 +10,7 @@
 #include <unordered_set>
 #include <vector>
 
-#include <fmt/core.h>
+#include "blocks.hxx"
 
 struct Connection {
   BlockSocket from;

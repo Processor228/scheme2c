@@ -1,7 +1,6 @@
 #pragma once
 
 #include <fmt/format.h>
-#include <linux/limits.h>
 #include <pugixml.hpp>
 
 #include <cctype>

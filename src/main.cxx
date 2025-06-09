@@ -1,8 +1,9 @@
 #include <cstdlib>
 #include <exception>
 #include <iostream>
-#include <pugixml.hpp>
 #include <string_view>
+
+#include <pugixml.hpp>
 
 #include "generator.hxx"
 #include "system-graph.hxx"
