@@ -62,7 +62,7 @@ private:
     ss << "static struct\n{\n";
     for (auto [id, block] : m_graph.nodes()) {
       if (!m_graph.outports().contains(id)) {
-        ss << fmt::format("    double {};\n", block->m_name);
+        ss << fmt::format("    double {};\n", block->name());
       }
     }
 
@@ -79,14 +79,14 @@ private:
       // get code that is required to setup a node
       std::string code = std::visit(
           overload{[&](const UnitDelay &ud) -> std::string {
-                     return m_package_name + "." + block->m_name + " = 0;";
+                     return block->as_from(m_package_name) + " = 0;";
                    },
 
                    [](const Outport &) -> std::string { return ""; },
                    [](const Inport &) -> std::string { return ""; },
                    [](const Gain &) -> std::string { return ""; },
                    [](const Sum &) -> std::string { return ""; }},
-          block->m_kind);
+          block->kind());
 
       if (!code.empty())
         ss << "    " << code;
@@ -132,6 +132,9 @@ private:
 
     // print evaluation propogation
     for (auto sid : std::ranges::reverse_view(order)) {
+      if (m_graph.delayed().contains(sid)) {
+        continue;
+      }
       auto node = m_graph.nodes().at(sid);
       std::string code = generateCode(node);
       if (!code.empty()) {
@@ -157,39 +160,40 @@ private:
 
   std::string generateCode(const std::shared_ptr<Block> &node) {
     return std::visit(
-        overload{[&](const UnitDelay &ud) -> std::string {
-                   return fmt::format("{}.{} = {}.{};\n",
-                        m_package_name,
-                        node->m_name,
-                        m_package_name,
-                        node->m_ports[0].name_of_connector);
-                 },
-                 [](const Outport &) -> std::string { return ""; },
-                 [](const Inport &) -> std::string { return ""; },
-                 [&](const Gain &g) -> std::string {
-                   return fmt::format("{}.{} = {}.{} * {};\n",
-                        m_package_name,
-                        node->m_name,
-                        m_package_name,
-                        node->m_ports[0].name_of_connector,
-                        g.gain());
-                 },
-                 [&](const Sum &s) -> std::string {
-                   std::string sign_first =
-                       (s.first() == Sum::Op::Minus ? " - " : +"");
-                   std::string sign_scd =
-                       (s.scd() == Sum::Op::Minus ? " - " : +" + ");
-                   return fmt::format("{}.{} = {}{}.{}{}{}.{};\n",
-                        m_package_name,
-                        node->m_name,
-                        sign_first,
-                        m_package_name,
-                        node->m_ports[0].name_of_connector,
-                        sign_scd,
-                        m_package_name,
-                        node->m_ports[1].name_of_connector);
-                 }},
-        node->m_kind);
+        overload {
+            [&](const UnitDelay& ud) -> std::string {
+                std::string delay_varname = node->as_from(m_package_name);
+                std::string input_varname = node->deps()[0].as_from(m_package_name);
+                return fmt::format("{} = {};\n",
+                    delay_varname,
+                    input_varname);
+            },
+            [](const Outport&) -> std::string { return ""; },
+            [](const Inport&) -> std::string { return ""; },
+            [&](const Gain& g) -> std::string {
+                std::string gain_varname = node->as_from(m_package_name);
+                std::string input_varname = node->deps()[0].as_from(m_package_name);
+                return fmt::format("{} = {} * {};\n",
+                    gain_varname,
+                    input_varname,
+                    g.gain());
+            },
+            [&](const Sum& s) -> std::string {
+                std::string add_varname = node->as_from(m_package_name);
+                std::string first_addendum = node->deps()[0].as_from(m_package_name);
+                std::string second_addendum = node->deps()[1].as_from(m_package_name);
+                std::string sign_first = (s.first() == Sum::Op::Minus ? " - " : "");
+                std::string sign_scd = (s.scd() == Sum::Op::Minus ? " - " : " + ");
+                return fmt::format("{} = {}{}{}{};\n",
+                    add_varname,
+                    sign_first,
+                    first_addendum,
+                    sign_scd,
+                    second_addendum);
+            }
+        },
+        node->kind()
+    );
   }
 
   std::string generateExportedPorts() {
@@ -197,24 +201,35 @@ private:
 
     ss << "static const " << m_package_name << "_ExtPort ext_ports[] = {\n";
     for (auto [id, block] : m_graph.nodes()) {
-      std::string code = std::visit(
-          overload{[](const UnitDelay &ud) -> std::string { return ""; },
-                   [&](const Outport &) -> std::string {
-                     return fmt::format(R"({{ "{}", &{}.{}, 0 }},)"
-                                        "\n",
-                                        block->m_name, m_package_name,
-                                        block->m_ports[0].name_of_connector);
-                   },
-                   [&](const Inport &) -> std::string {
-                     return fmt::format(R"({{ "{}", &{}.{}, 1 }},)"
-                                        "\n",
-                                        block->m_name, m_package_name,
-                                        block->m_name);
-                     ;
-                   },
-                   [](const Gain &) -> std::string { return ""; },
-                   [](const Sum &) -> std::string { return ""; }},
-          block->m_kind);
+        std::string code = std::visit(
+            overload{
+                [](const UnitDelay& ud) -> std::string {
+                    return "";
+                },
+                [&](const Outport&) -> std::string {
+                    std::string_view export_name = block->name();
+                    std::string varname = block->deps()[0].as_from(m_package_name);
+                    return fmt::format(R"({{ "{}", &{}, 0 }},)" "\n",
+                        export_name,
+                        varname);
+                },
+                [&](const Inport&) -> std::string {
+                    std::string_view export_name = block->name();
+                    std::string varname = block->as_from(m_package_name);
+
+                    return fmt::format(R"({{ "{}", &{}, 1 }},)" "\n",
+                        export_name,
+                        varname);
+                },
+                [](const Gain&) -> std::string {
+                    return "";
+                },
+                [](const Sum&) -> std::string {
+                    return "";
+                }
+            },
+            block->kind()
+        );
 
       if (!code.empty()) {
         ss << "    " << code;

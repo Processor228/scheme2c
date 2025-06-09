@@ -3,7 +3,6 @@
 #include "blocks.hxx"
 #include <pugixml.hpp>
 
-#include <algorithm>
 #include <cstddef>
 #include <memory>
 #include <string_view>
@@ -28,15 +27,14 @@ public:
       auto type = std::string_view(elem.name());
       if (type == "Block") {
         auto block = parseBlock(elem);
-        m_nodes[block->m_sid] = block;
+        m_nodes[block->sid()] = block;
       }
       if (type == "Line") {
         auto [from, destinations] = parseLine(elem);
         for (auto dst : destinations) {
           /* to prevent cycles during topological sorting, lets
            * simply not add edges leading to UnitDelays */
-          if (std::find(m_delayed.begin(), m_delayed.end(), dst.SID) ==
-              m_delayed.end()) {
+          if (!m_delayed.contains(dst.SID)) {
             m_edges[from.SID].push_back({from, dst});
           }
         }
@@ -52,7 +50,7 @@ public:
 
   inline const std::unordered_set<size_t> &outports() const { return m_outports; }
 
-  inline const std::vector<size_t> &delayed() const { return m_delayed; }
+  inline const std::unordered_set<size_t> &delayed() const { return m_delayed; }
 
 private:
   std::shared_ptr<Block> parseBlock(const pugi::xml_node &elem) {
@@ -64,11 +62,11 @@ private:
     }
     auto block = Block::withEnoughInfoAboutType(type, elem);
     if (type == "Inport") {
-      m_inports.push_back(block->m_sid);
+      m_inports.push_back(block->sid());
     } else if (type == "Outport") {
-      m_outports.insert(block->m_sid);
+      m_outports.insert(block->sid());
     } else if (type == "UnitDelay") {
-      m_delayed.push_back(block->m_sid);
+      m_delayed.insert(block->sid());
     }
 
     return block;
@@ -83,7 +81,7 @@ private:
     if (src_node) {
       src = BlockSocket::parseSocket(src_node.node().text().as_string());
     }
-    std::string_view source_name = m_nodes.at(src.SID)->m_name;
+    std::string_view source_name = m_nodes.at(src.SID)->name();
 
     auto dst_node = line_node.select_node("./P[@Name='Dst']");
     if (dst_node) {
@@ -102,7 +100,7 @@ private:
 
     for (auto [sid, port] : dsts) {
       // if such sid is not yet defined, error will occur
-      m_nodes.at(sid)->m_ports[port].name_of_connector = source_name;
+      m_nodes.at(sid)->deps()[port].name_of_connector = source_name;
     }
 
     return {src, dsts};
@@ -115,5 +113,5 @@ private:
 
   std::vector<size_t> m_inports;
   std::unordered_set<size_t> m_outports;
-  std::vector<size_t> m_delayed;
+  std::unordered_set<size_t> m_delayed;
 };
