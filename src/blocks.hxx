@@ -9,7 +9,6 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
-#include <unordered_map>
 #include <variant>
 #include <vector>
 
@@ -94,7 +93,7 @@ public:
       gain_value = gain_node.node().text().as_double();
     }
 
-    return Gain(gain_value);
+    return Gain{gain_value};
   }
 
   Gain(double gain) : m_gain(gain) {}
@@ -133,7 +132,7 @@ class Outport {
 public:
   static Outport parseFromXmlNode(const pugi::xml_node &elem,
                                   std::string_view name, size_t sid) {
-    return Outport();
+    return Outport{};
   }
 };
 

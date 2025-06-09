@@ -61,7 +61,9 @@ private:
 
     ss << "static struct\n{\n";
     for (auto [id, block] : m_graph.nodes()) {
-      ss << fmt::format("    double {};\n", block->m_name);
+      if (!m_graph.outports().contains(id)) {
+        ss << fmt::format("    double {};\n", block->m_name);
+      }
     }
 
     ss << "} " << m_package_name << ";\n\n";

@@ -8,6 +8,7 @@
 #include <memory>
 #include <string_view>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #include <fmt/core.h>
@@ -49,7 +50,7 @@ public:
 
   inline const std::vector<size_t> &inports() const { return m_inports; }
 
-  inline const std::vector<size_t> &outports() const { return m_outports; }
+  inline const std::unordered_set<size_t> &outports() const { return m_outports; }
 
   inline const std::vector<size_t> &delayed() const { return m_delayed; }
 
@@ -65,7 +66,7 @@ private:
     if (type == "Inport") {
       m_inports.push_back(block->m_sid);
     } else if (type == "Outport") {
-      m_outports.push_back(block->m_sid);
+      m_outports.insert(block->m_sid);
     } else if (type == "UnitDelay") {
       m_delayed.push_back(block->m_sid);
     }
@@ -113,6 +114,6 @@ private:
   Edges m_edges;
 
   std::vector<size_t> m_inports;
-  std::vector<size_t> m_outports;
+  std::unordered_set<size_t> m_outports;
   std::vector<size_t> m_delayed;
 };
