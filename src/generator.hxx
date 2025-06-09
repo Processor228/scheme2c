@@ -13,8 +13,8 @@
 #include <fmt/core.h>
 
 #include "blocks.hxx"
-#include "system-graph.hxx"
 #include "overload.hxx"
+#include "system-graph.hxx"
 
 class CodeGenerator {
 public:
@@ -77,16 +77,16 @@ private:
     ss << "void " << m_package_name << "_generated_init()\n{\n";
     for (auto [id, block] : m_graph.nodes()) {
       // get code that is required to setup a node
-      std::string code = std::visit(
-          overload{[&](const UnitDelay &ud) -> std::string {
-                     return block->as_from(m_package_name) + " = 0;";
-                   },
+      std::string code =
+          std::visit(overload{[&](const UnitDelay &ud) -> std::string {
+                                return block->as_from(m_package_name) + " = 0;";
+                              },
 
-                   [](const Outport &) -> std::string { return ""; },
-                   [](const Inport &) -> std::string { return ""; },
-                   [](const Gain &) -> std::string { return ""; },
-                   [](const Sum &) -> std::string { return ""; }},
-          block->kind());
+                              [](const Outport &) -> std::string { return ""; },
+                              [](const Inport &) -> std::string { return ""; },
+                              [](const Gain &) -> std::string { return ""; },
+                              [](const Sum &) -> std::string { return ""; }},
+                     block->kind());
 
       if (!code.empty())
         ss << "    " << code;
@@ -114,14 +114,14 @@ private:
   }
 
   std::vector<size_t> sortTopologically() {
-     std::vector<size_t> order;
-     std::set<size_t> visited;
+    std::vector<size_t> order;
+    std::set<size_t> visited;
 
-     for (auto [sid, block] : m_graph.nodes()) {
-       if (!visited.contains(sid))
-         dfs(sid, visited, order);
-     }
-     return order;
+    for (auto [sid, block] : m_graph.nodes()) {
+      if (!visited.contains(sid))
+        dfs(sid, visited, order);
+    }
+    return order;
   }
 
   std::string generateStepRunner() {
@@ -160,40 +160,36 @@ private:
 
   std::string generateCode(const std::shared_ptr<Block> &node) {
     return std::visit(
-        overload {
-            [&](const UnitDelay& ud) -> std::string {
-                std::string delay_varname = node->as_from(m_package_name);
-                std::string input_varname = node->deps()[0].as_from(m_package_name);
-                return fmt::format("{} = {};\n",
-                    delay_varname,
-                    input_varname);
+        overload{
+            [&](const UnitDelay &ud) -> std::string {
+              std::string delay_varname = node->as_from(m_package_name);
+              std::string input_varname =
+                  node->deps()[0].as_from(m_package_name);
+              return fmt::format("{} = {};\n", delay_varname, input_varname);
             },
-            [](const Outport&) -> std::string { return ""; },
-            [](const Inport&) -> std::string { return ""; },
-            [&](const Gain& g) -> std::string {
-                std::string gain_varname = node->as_from(m_package_name);
-                std::string input_varname = node->deps()[0].as_from(m_package_name);
-                return fmt::format("{} = {} * {};\n",
-                    gain_varname,
-                    input_varname,
-                    g.gain());
+            [](const Outport &) -> std::string { return ""; },
+            [](const Inport &) -> std::string { return ""; },
+            [&](const Gain &g) -> std::string {
+              std::string gain_varname = node->as_from(m_package_name);
+              std::string input_varname =
+                  node->deps()[0].as_from(m_package_name);
+              return fmt::format("{} = {} * {};\n", gain_varname, input_varname,
+                                 g.gain());
             },
-            [&](const Sum& s) -> std::string {
-                std::string add_varname = node->as_from(m_package_name);
-                std::string first_addendum = node->deps()[0].as_from(m_package_name);
-                std::string second_addendum = node->deps()[1].as_from(m_package_name);
-                std::string sign_first = (s.first() == Sum::Op::Minus ? " - " : "");
-                std::string sign_scd = (s.scd() == Sum::Op::Minus ? " - " : " + ");
-                return fmt::format("{} = {}{}{}{};\n",
-                    add_varname,
-                    sign_first,
-                    first_addendum,
-                    sign_scd,
-                    second_addendum);
-            }
-        },
-        node->kind()
-    );
+            [&](const Sum &s) -> std::string {
+              std::string add_varname = node->as_from(m_package_name);
+              std::string first_addendum =
+                  node->deps()[0].as_from(m_package_name);
+              std::string second_addendum =
+                  node->deps()[1].as_from(m_package_name);
+              std::string sign_first =
+                  (s.first() == Sum::Op::Minus ? " - " : "");
+              std::string sign_scd =
+                  (s.scd() == Sum::Op::Minus ? " - " : " + ");
+              return fmt::format("{} = {}{}{}{};\n", add_varname, sign_first,
+                                 first_addendum, sign_scd, second_addendum);
+            }},
+        node->kind());
   }
 
   std::string generateExportedPorts() {
@@ -201,35 +197,27 @@ private:
 
     ss << "static const " << m_package_name << "_ExtPort ext_ports[] = {\n";
     for (auto [id, block] : m_graph.nodes()) {
-        std::string code = std::visit(
-            overload{
-                [](const UnitDelay& ud) -> std::string {
-                    return "";
-                },
-                [&](const Outport&) -> std::string {
-                    std::string_view export_name = block->name();
-                    std::string varname = block->deps()[0].as_from(m_package_name);
-                    return fmt::format(R"({{ "{}", &{}, 0 }},)" "\n",
-                        export_name,
-                        varname);
-                },
-                [&](const Inport&) -> std::string {
-                    std::string_view export_name = block->name();
-                    std::string varname = block->as_from(m_package_name);
+      std::string code = std::visit(
+          overload{[](const UnitDelay &ud) -> std::string { return ""; },
+                   [&](const Outport &) -> std::string {
+                     std::string_view export_name = block->name();
+                     std::string varname =
+                         block->deps()[0].as_from(m_package_name);
+                     return fmt::format(R"({{ "{}", &{}, 0 }},)"
+                                        "\n",
+                                        export_name, varname);
+                   },
+                   [&](const Inport &) -> std::string {
+                     std::string_view export_name = block->name();
+                     std::string varname = block->as_from(m_package_name);
 
-                    return fmt::format(R"({{ "{}", &{}, 1 }},)" "\n",
-                        export_name,
-                        varname);
-                },
-                [](const Gain&) -> std::string {
-                    return "";
-                },
-                [](const Sum&) -> std::string {
-                    return "";
-                }
-            },
-            block->kind()
-        );
+                     return fmt::format(R"({{ "{}", &{}, 1 }},)"
+                                        "\n",
+                                        export_name, varname);
+                   },
+                   [](const Gain &) -> std::string { return ""; },
+                   [](const Sum &) -> std::string { return ""; }},
+          block->kind());
 
       if (!code.empty()) {
         ss << "    " << code;

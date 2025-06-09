@@ -17,13 +17,11 @@ using namespace std::string_literals;
 
 struct Dependency {
 
-    operator std::string() {
-        return name_of_connector;
-    }
+  operator std::string() { return name_of_connector; }
 
-    std::string as_from(std::string package) const {
-        return package + "." + name_of_connector;
-    }
+  std::string as_from(std::string package) const {
+    return package + "." + name_of_connector;
+  }
 
   std::string name_of_connector;
 };
@@ -108,9 +106,7 @@ public:
 
   Gain(double gain) : m_gain(gain) {}
 
-  double gain() const {
-    return m_gain;
-  }
+  double gain() const { return m_gain; }
 
   double m_gain;
 };
@@ -131,9 +127,7 @@ public:
 
   UnitDelay(double sample_time) : m_sample_time(sample_time) {}
 
-  double sample_time() const {
-    return m_sample_time;
-  }
+  double sample_time() const { return m_sample_time; }
 
   double m_sample_time;
 };
@@ -186,7 +180,8 @@ struct Block {
       throw std::runtime_error("Unknown block type: "s + type.data());
     }
 
-    return std::make_shared<Block>(std::move(name), sid, std::move(ports), kind);
+    return std::make_shared<Block>(std::move(name), sid, std::move(ports),
+                                   kind);
   }
 
   Block(std::string name, size_t sid, std::vector<Dependency> ports, Kind kind)
@@ -197,25 +192,15 @@ struct Block {
     return package + "." + m_name;
   }
 
-  std::string_view name() const {
-    return m_name;
-  }
+  std::string_view name() const { return m_name; }
 
-  size_t sid() const {
-    return m_sid;
-  }
+  size_t sid() const { return m_sid; }
 
-  std::vector<Dependency> &deps() {
-    return m_ports;
-  }
+  std::vector<Dependency> &deps() { return m_ports; }
 
-  const std::vector<Dependency> &deps() const {
-    return m_ports;
-  }
+  const std::vector<Dependency> &deps() const { return m_ports; }
 
-  const Kind &kind() const {
-    return m_kind;
-  }
+  const Kind &kind() const { return m_kind; }
 
 private:
   std::string m_name;

@@ -48,7 +48,9 @@ public:
 
   inline const std::vector<size_t> &inports() const { return m_inports; }
 
-  inline const std::unordered_set<size_t> &outports() const { return m_outports; }
+  inline const std::unordered_set<size_t> &outports() const {
+    return m_outports;
+  }
 
   inline const std::unordered_set<size_t> &delayed() const { return m_delayed; }
 
