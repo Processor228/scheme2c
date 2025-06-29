@@ -107,6 +107,7 @@ public:
 
   double gain() const { return m_gain; }
 
+private:
   double m_gain;
 };
 
@@ -128,6 +129,7 @@ public:
 
   double sample_time() const { return m_sample_time; }
 
+private:
   double m_sample_time;
 };
 

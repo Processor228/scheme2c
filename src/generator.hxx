@@ -24,13 +24,13 @@ public:
     return *this;
   }
 
-  CodeGenerator &withProlog(const std::string_view preamble) {
-    m_prolog = std::string(preamble);
+  CodeGenerator &withProlog(const std::string_view prolog) {
+    m_prolog = prolog;
     return *this;
   }
 
   CodeGenerator &withEpilogue(std::string_view epilogue) {
-    m_epilogue = std::string(epilogue);
+    m_epilogue = epilogue;
     return *this;
   }
 
@@ -81,10 +81,8 @@ private:
                                 return block->as_from(m_package_name) + " = 0;";
                               },
 
-                              [](const Outport &) -> std::string { return ""; },
-                              [](const Inport &) -> std::string { return ""; },
-                              [](const Gain &) -> std::string { return ""; },
-                              [](const Sum &) -> std::string { return ""; }},
+                              [](const auto &default_) -> std::string { return ""; }
+                            },
                      block->kind());
 
       if (!code.empty())
@@ -166,8 +164,6 @@ private:
                   node->deps()[0].as_from(m_package_name);
               return fmt::format("{} = {};\n", delay_varname, input_varname);
             },
-            [](const Outport &) -> std::string { return ""; },
-            [](const Inport &) -> std::string { return ""; },
             [&](const Gain &g) -> std::string {
               std::string gain_varname = node->as_from(m_package_name);
               std::string input_varname =
@@ -187,7 +183,9 @@ private:
                   (s.scd() == Sum::Op::Minus ? " - " : " + ");
               return fmt::format("{} = {}{}{}{};\n", add_varname, sign_first,
                                  first_addendum, sign_scd, second_addendum);
-            }},
+            },
+            [](const auto &default_) -> std::string { return ""; },
+          },
         node->kind());
   }
 
@@ -214,8 +212,7 @@ private:
                                         "\n",
                                         export_name, varname);
                    },
-                   [](const Gain &) -> std::string { return ""; },
-                   [](const Sum &) -> std::string { return ""; }},
+                   [](const auto &default_) -> std::string { return ""; }},
           block->kind());
 
       if (!code.empty()) {
@@ -237,6 +234,6 @@ private:
   const SystemGraph &m_graph;
   std::stringstream m_res;
   std::string m_package_name;
-  std::string m_prolog;
-  std::string m_epilogue;
+  std::string_view m_prolog;
+  std::string_view m_epilogue;
 };
